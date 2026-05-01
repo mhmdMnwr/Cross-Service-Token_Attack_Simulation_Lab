@@ -1,0 +1,144 @@
+version: "3.8"
+
+networks:
+  5g-sbi-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+volumes:
+  nrf-logs:
+  udm-logs:
+  ausf-logs:
+  amf-logs:
+  smf-logs:
+
+services:
+  # ─── NRF — Network Repository Function (OAuth2 + NF Registry) ───
+  nrf:
+    build: ./nrf
+    container_name: 5g-nrf
+    hostname: nrf
+    ports:
+      - "8000:8000"
+    environment:
+      - JWT_SIGNING_KEY=5g-sba-lab-secret-key-2024
+    volumes:
+      - nrf-logs:/app/logs
+    networks:
+      - 5g-sbi-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ─── UDM — Unified Data Management (Subscriber Store) ───
+  udm:
+    build: ./udm
+    container_name: 5g-udm
+    hostname: udm
+    ports:
+      - "8001:8001"
+    environment:
+      - JWT_SIGNING_KEY=5g-sba-lab-secret-key-2024
+      - NRF_URI=http://nrf:8000
+    volumes:
+      - udm-logs:/app/logs
+    depends_on:
+      nrf:
+        condition: service_healthy
+    networks:
+      - 5g-sbi-net
+    restart: unless-stopped
+
+  # ─── AUSF — Authentication Server Function ───
+  ausf:
+    build: ./ausf
+    container_name: 5g-ausf
+    hostname: ausf
+    ports:
+      - "8002:8002"
+    environment:
+      - JWT_SIGNING_KEY=5g-sba-lab-secret-key-2024
+      - NRF_URI=http://nrf:8000
+    volumes:
+      - ausf-logs:/app/logs
+    depends_on:
+      nrf:
+        condition: service_healthy
+    networks:
+      - 5g-sbi-net
+    restart: unless-stopped
+
+  # ─── AMF — Access and Mobility Management Function ───
+  amf:
+    build: ./amf
+    container_name: 5g-amf
+    hostname: amf
+    ports:
+      - "8003:8003"
+    environment:
+      - JWT_SIGNING_KEY=5g-sba-lab-secret-key-2024
+      - NRF_URI=http://nrf:8000
+    volumes:
+      - amf-logs:/app/logs
+    depends_on:
+      nrf:
+        condition: service_healthy
+      ausf:
+        condition: service_started
+      udm:
+        condition: service_started
+    networks:
+      - 5g-sbi-net
+    restart: unless-stopped
+
+  # ─── SMF — Session Management Function ───
+  smf:
+    build: ./smf
+    container_name: 5g-smf
+    hostname: smf
+    ports:
+      - "8004:8004"
+    environment:
+      - JWT_SIGNING_KEY=5g-sba-lab-secret-key-2024
+      - NRF_URI=http://nrf:8000
+    volumes:
+      - smf-logs:/app/logs
+    depends_on:
+      nrf:
+        condition: service_healthy
+      udm:
+        condition: service_started
+    networks:
+      - 5g-sbi-net
+    restart: unless-stopped
+
+  # ─── ATTACKER — Rogue NF (runs on demand) ───
+  attacker:
+    build: ./attacker
+    container_name: 5g-attacker
+    hostname: attacker
+    ports:
+      - "8005:8005"
+    environment:
+      - JWT_SIGNING_KEY=5g-sba-lab-secret-key-2024
+      - NRF_URI=http://nrf:8000
+    depends_on:
+      nrf:
+        condition: service_healthy
+      udm:
+        condition: service_started
+      ausf:
+        condition: service_started
+      amf:
+        condition: service_started
+      smf:
+        condition: service_started
+    networks:
+      - 5g-sbi-net
+    profiles:
+      - attack
