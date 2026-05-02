@@ -200,8 +200,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("5G SBA Attack Lab - Manual Operator Console")
-        self.geometry("1200x920")
-        self.minsize(980, 720)
+        self.geometry("1200x860")
+        self.minsize(760, 560)
         self.configure(bg=COLORS["bg"])
         # Brace the family name so Tk treats "DejaVu Sans" as one token.
         self.option_add("*Font", f"{{{FONT_SANS}}} 10")
@@ -256,7 +256,26 @@ class App(tk.Tk):
             darkcolor=COLORS["accent"],
         )
 
-        header = tk.Frame(self, bg=COLORS["bg"])
+        self.canvas = tk.Canvas(self, borderwidth=0, background=COLORS["bg"], highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas, bg=COLORS["bg"])
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda _e: self.canvas.configure(scrollregion=self.canvas.bbox("all")),
+        )
+
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.bind(
+            "<Configure>",
+            lambda event: self.canvas.itemconfigure(self.canvas_window, width=event.width),
+        )
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True, padx=(16, 0), pady=12)
+        self.scrollbar.pack(side="right", fill="y", padx=(0, 16), pady=12)
+
+        header = tk.Frame(self.scrollable_frame, bg=COLORS["bg"])
         header.pack(fill="x", padx=16, pady=(16, 10))
 
         hero = tk.Frame(
@@ -300,7 +319,7 @@ class App(tk.Tk):
         )
         hero_tag.pack(side="right", padx=16, pady=16)
 
-        controls = tk.Frame(self, bg=COLORS["bg"])
+        controls = tk.Frame(self.scrollable_frame, bg=COLORS["bg"])
         controls.pack(fill="x", padx=16, pady=(0, 4))
 
         self.run_all_btn = ttk.Button(
@@ -320,12 +339,14 @@ class App(tk.Tk):
             bg=COLORS["bg"],
             fg=COLORS["muted"],
             font=(FONT_SANS, 10),
+            anchor="e",
+            justify="right",
         )
-        self.status_label.pack(side="right")
+        self.status_label.pack(side="right", fill="x", expand=True, padx=(10, 0))
 
         self.supi_var = tk.StringVar(value="imsi-001010000000001")
 
-        self.token_row = tk.Frame(self, bg=COLORS["bg"])
+        self.token_row = tk.Frame(self.scrollable_frame, bg=COLORS["bg"])
         self.token_row.pack(fill="x", padx=16)
 
         self.nrf_token_value = self.create_token_card(
@@ -341,25 +362,6 @@ class App(tk.Tk):
             self.token_row, 3, "TARGET SUPI", self.supi_var
         )
 
-        self.canvas = tk.Canvas(self, borderwidth=0, background=COLORS["bg"], highlightthickness=0)
-        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = tk.Frame(self.canvas, bg=COLORS["bg"])
-
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda _e: self.canvas.configure(scrollregion=self.canvas.bbox("all")),
-        )
-
-        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.bind(
-            "<Configure>",
-            lambda event: self.canvas.itemconfigure(self.canvas_window, width=event.width),
-        )
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
-        self.canvas.pack(side="left", fill="both", expand=True, padx=(16, 0), pady=12)
-        self.scrollbar.pack(side="right", fill="y", padx=(0, 16), pady=12)
-
         self.steps = []
 
         self.step_health = self.add_step("0) Health Check", self.run_health)
@@ -372,14 +374,16 @@ class App(tk.Tk):
         self.step_ausf = self.add_step("7) Query AUSF Auth Vectors", self.run_ausf_auth)
 
         self.progress = ttk.Progressbar(
-            self, mode="indeterminate", style="Status.Horizontal.TProgressbar"
+            self.scrollable_frame, mode="indeterminate", style="Status.Horizontal.TProgressbar"
         )
-        self.progress.pack(fill="x", padx=16, pady=(0, 8))
+        self.progress.pack(fill="x", padx=16, pady=(0, 14))
 
         self.refresh_requests()
         self.update_token_labels()
 
         self.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.bind_all("<Button-4>", self._on_mousewheel_linux)
+        self.bind_all("<Button-5>", self._on_mousewheel_linux)
 
     def create_token_card(self, parent, column, title, accent_color):
         card = tk.Frame(
@@ -529,7 +533,17 @@ class App(tk.Tk):
         )
 
     def _on_mousewheel(self, event):
+        if event.widget.winfo_class() == "Text":
+            return
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def _on_mousewheel_linux(self, event):
+        if event.widget.winfo_class() == "Text":
+            return
+        if event.num == 4:
+            self.canvas.yview_scroll(-1, "units")
+        elif event.num == 5:
+            self.canvas.yview_scroll(1, "units")
 
     def set_busy(self, busy, message=None):
         if busy:

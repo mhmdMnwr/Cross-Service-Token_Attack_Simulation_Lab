@@ -1,0 +1,13 @@
+
+
+
+ @Token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJOUkYiLCJzdWIiOiJhbWYtMDAxIiwiZXhwIjoxNzc3NzQ5OTA4LCJpYXQiOjE3Nzc3NDYzMDgsImp0aSI6ImFtZi0wMDEtMTc3Nzc0NjMwODcxOTk5MTg4MyIsInNjb3BlIjoibnVkbS1zZG0iLCJuZlR5cGUiOiJBTUYifQ.N6yrnSCs6qFOVOjKpLTqHn6tPM0b58H7TpVlkPc92_k
+
+###dfd
+Get   http://localhost:8001/nudm-sdm/v1/imsi-001010000000002/am-data
+Authorization: Bearer {{Token}}
+
+###
+
+Get http://localhost:8003/debug/token-store
+Authorization: Bearer {{Token}}
