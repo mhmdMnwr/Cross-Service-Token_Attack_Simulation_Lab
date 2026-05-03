@@ -128,20 +128,21 @@ class StepFrame(tk.Frame):
         )
         self.req_label.pack(anchor="w", padx=12)
 
-        self.req_text = ScrolledText(
+        self.req_text = tk.Text(
             self,
-            height=7,
-            wrap="word",
-            font=(FONT_MONO, 10),
-            bg=COLORS["panel_alt"],
+            bg=COLORS["panel"],
             fg=COLORS["text"],
-            insertbackground=COLORS["text"],
+            font=(FONT_MONO, 10),
+            wrap="word",
+            height=6,
             relief="flat",
-            highlightthickness=1,
-            highlightbackground=COLORS["border"],
+            bd=0,
+            highlightthickness=0,
+            insertbackground=COLORS["text"],
+            cursor="xterm",
         )
+        self.req_text.pack(fill="x", padx=12, pady=(4, 10))
         self.req_text.configure(state="disabled")
-        self.req_text.pack(fill="both", expand=True, padx=12, pady=(4, 10))
 
         self.res_label = tk.Label(
             self,
@@ -154,7 +155,7 @@ class StepFrame(tk.Frame):
 
         self.res_text = ScrolledText(
             self,
-            height=9,
+            height=15,
             wrap="word",
             font=(FONT_MONO, 10),
             bg=COLORS["panel_alt"],
